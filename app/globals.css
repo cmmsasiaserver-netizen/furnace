@@ -1,0 +1,267 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@layer base {
+  :root {
+    --background: 220 20% 97%;
+    --foreground: 213 27% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 213 27% 20%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 213 27% 20%;
+    --primary: 215 55% 40%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 213 40% 24%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 220 14% 92%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 80% 73%;
+    --accent-foreground: 213 27% 15%;
+    --destructive: 4 72% 56%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 13% 87%;
+    --input: 220 13% 87%;
+    --ring: 215 55% 40%;
+    --chart-1: 215 55% 40%;
+    --chart-2: 145 63% 49%;
+    --chart-3: 36 100% 50%;
+    --chart-4: 4 72% 56%;
+    --chart-5: 210 80% 73%;
+    --radius: 0.5rem;
+
+    --sidebar-background: 210 22% 30%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 210 80% 73%;
+    --sidebar-primary-foreground: 213 27% 15%;
+    --sidebar-accent: 210 18% 38%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 210 18% 38%;
+    --sidebar-ring: 210 80% 73%;
+
+    --success: 145 63% 49%;
+    --success-foreground: 0 0% 100%;
+    --warning: 36 100% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 207 72% 53%;
+    --info-foreground: 0 0% 100%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@keyframes pulse-critical {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.animate-pulse-critical {
+  animation: pulse-critical 1.5s ease-in-out infinite;
+}
+
+/* Rich Text Content Styling (Quill Output) */
+.quill-content {
+  line-height: 1.6;
+}
+
+.quill-content p {
+  margin-bottom: 0.75rem;
+}
+
+.quill-content ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.quill-content ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.quill-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+  border: 1px solid #cbd5e1;
+}
+
+.quill-content table th,
+.quill-content table td {
+  border: 1px solid #cbd5e1;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.quill-content table th {
+  background-color: #f8fafc;
+  font-weight: 700;
+}
+
+.quill-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  margin: 1rem 0;
+}
+
+.quill-content blockquote {
+  border-left: 4px solid var(--primary);
+  padding-left: 1rem;
+  font-style: italic;
+  color: var(--muted-foreground);
+  margin: 1rem 0;
+}
+
+.quill-content pre {
+  background-color: #1e293b;
+  color: #f8fafc;
+  padding: 1rem;
+  border-radius: var(--radius);
+  font-family: monospace;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+/* Quill Editor Overrides */
+.rich-text-editor .quill {
+  display: flex;
+  flex-direction: column;
+}
+
+.rich-text-editor .ql-toolbar.ql-snow {
+  border: none !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  background: #f8fafc;
+  border-radius: 12px 12px 0 0;
+}
+
+.rich-text-editor .ql-container.ql-snow {
+  border: none !important;
+  font-family: inherit;
+  font-size: 0.875rem;
+  min-height: 200px;
+}
+
+.rich-text-editor .ql-editor {
+  min-height: 200px;
+  padding: 1rem;
+}
+
+.rich-text-editor .ql-editor.ql-blank::before {
+  font-style: normal;
+  color: #94a3b8;
+  left: 1rem;
+}
+
+.rich-text-editor .ql-editor table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+  direction: ltr; /* Match Excel column order */
+}
+
+.rich-text-editor .ql-editor table td,
+.rich-text-editor .ql-editor table th {
+  border: 1px solid #cbd5e1;
+  padding: 0.5rem;
+  text-align: right !important; /* Force right for Urdu */
+  vertical-align: top;
+}
+
+/* Ensure inner paragraphs also align right */
+.rich-text-editor .ql-editor td p,
+.rich-text-editor .ql-editor th p {
+  text-align: right !important;
+  margin-bottom: 0 !important;
+}
+
+/* ── RTL / Urdu / Arabic support ─────────────────────────────── */
+/* Direction button in toolbar */
+.rich-text-editor .ql-direction .ql-picker-label::before,
+.rich-text-editor .ql-direction .ql-picker-item::before {
+  content: 'RTL';
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* RTL paragraphs inside the editor */
+.rich-text-editor .ql-editor [dir="rtl"],
+.rich-text-editor .ql-editor .ql-direction-rtl,
+.rich-text-editor .ql-editor p {
+  text-align: right; /* Default all paragraphs to right for Urdu ease */
+}
+
+.rich-text-editor .ql-editor [dir="rtl"],
+.rich-text-editor .ql-editor .ql-direction-rtl {
+  direction: rtl !important;
+  unicode-bidi: bidi-override;
+}
+
+/* RTL paragraphs in the PDF preview/print output */
+.quill-content [dir="rtl"],
+.quill-content .ql-direction-rtl,
+.quill-content p[style*="direction: rtl"],
+.quill-content p[style*="direction:rtl"] {
+  direction: rtl !important;
+  text-align: right !important;
+  unicode-bidi: bidi-override;
+  font-family: "Times New Roman", "Noto Nastaliq Urdu", serif;
+}
+
+/* Tables inside PDF output */
+.quill-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5rem 0;
+  direction: ltr; /* Match Excel column order (LTR) */
+}
+
+.quill-content table td,
+.quill-content table th {
+  border: 1px solid #374151;
+  padding: 4px 8px;
+  text-align: right !important;
+  font-size: 10px;
+  vertical-align: top;
+  /* Support RTL text inside LTR columns */
+  unicode-bidi: plaintext; 
+}
+
+.quill-content td p,
+.quill-content th p {
+  text-align: right !important;
+  margin: 0 !important;
+}
+
+.quill-content table th {
+  background-color: #f1f5f9;
+  font-weight: 700;
+}
+
