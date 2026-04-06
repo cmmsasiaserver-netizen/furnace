@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, FileText, Clock, Fuel, Trash2, Package, Users, TrendingUp, DollarSign, Loader2, Factory, AlertCircle } from "lucide-react";
+import { Plus, FileText, Clock, Fuel, Trash2, Package, Users, TrendingUp, DollarSign, Loader2, Factory, AlertCircle, FileSpreadsheet } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import * as XLSX from "xlsx";
 
 type FuelType = "wood" | "pellet" | "fibre" | "wood-husk";
 
@@ -382,6 +383,71 @@ export default function ProductionReportPage() {
   const totalLabourCost = records.reduce((acc, r) => acc + r.labourCost, 0);
   const totalCost = records.reduce((acc, r) => acc + r.totalCost, 0);
 
+  // Export records to Excel
+  const exportToExcel = () => {
+    if (records.length === 0) {
+      alert("No records to export");
+      return;
+    }
+
+    // Prepare data for export
+    const exportData = records.map((record) => ({
+      Date: record.date,
+      "Batch No": record.batchNo,
+      "Start Time": record.startTime,
+      "End Time": record.endTime,
+      "Total Hours": record.totalHours,
+      "Material Input (kg)": record.materialInput,
+      "Output After Cooking (kg)": record.outputAfterCooking,
+      "Yield %": record.yieldPercentage,
+      "Fuel Types": record.fuels.map((f) => FUEL_LABELS[f.fuelType]).join(", "),
+      "Total Fuel Weight (kg)": record.totalFuelWeight,
+      "Total Fuel Cost": record.totalFuelCost,
+      "Labour Hours": record.labourHours,
+      "Number of Labour": record.numberOfLabour,
+      "Labour Cost": record.labourCost,
+      "Shifting Cost": record.shiftingCost,
+      "Total Cost": record.totalCost,
+      "Cost per kg": record.costPerKg,
+    }));
+
+    // Create worksheet
+    const ws = XLSX.utils.json_to_sheet(exportData);
+
+    // Set column widths
+    const colWidths = [
+      { wch: 12 }, // Date
+      { wch: 12 }, // Batch No
+      { wch: 12 }, // Start Time
+      { wch: 12 }, // End Time
+      { wch: 12 }, // Total Hours
+      { wch: 20 }, // Material Input
+      { wch: 25 }, // Output After Cooking
+      { wch: 10 }, // Yield %
+      { wch: 30 }, // Fuel Types
+      { wch: 20 }, // Total Fuel Weight
+      { wch: 15 }, // Total Fuel Cost
+      { wch: 13 }, // Labour Hours
+      { wch: 17 }, // Number of Labour
+      { wch: 12 }, // Labour Cost
+      { wch: 14 }, // Shifting Cost
+      { wch: 12 }, // Total Cost
+      { wch: 12 }, // Cost per kg
+    ];
+    ws["!cols"] = colWidths;
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Production Report");
+
+    // Generate filename with current date
+    const today = new Date().toISOString().split("T")[0];
+    const filename = `Production_Report_${today}.xlsx`;
+
+    // Download file
+    XLSX.writeFile(wb, filename);
+  };
+
   return (
     <div className="min-h-screen flex">
       <DashboardSidebar activeItem="production-report" />
@@ -396,13 +462,24 @@ export default function ProductionReportPage() {
               </h1>
               <p className="text-slate-400 mt-1">Batching time tracking and production efficiency analysis</p>
             </div>
-            <Button 
-              onClick={() => setShowForm(!showForm)}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              {showForm ? "Cancel" : "Add Record"}
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                onClick={exportToExcel}
+                variant="outline"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white border-none"
+                disabled={records.length === 0}
+              >
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Export Excel
+              </Button>
+              <Button
+                onClick={() => setShowForm(!showForm)}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                {showForm ? "Cancel" : "Add Record"}
+              </Button>
+            </div>
           </div>
           
           {/* Stats Row */}
