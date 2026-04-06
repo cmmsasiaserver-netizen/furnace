@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, FileText, Clock, Fuel, Trash2, Package, Users, TrendingUp, DollarSign } from "lucide-react";
+import { Plus, FileText, Clock, Fuel, Trash2, Package, Users, TrendingUp, DollarSign, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 type FuelType = "wood" | "pellet" | "fibre" | "wood-husk";
 
@@ -58,6 +59,8 @@ interface BatchingRecord {
 
 export default function ProductionReportPage() {
   const [records, setRecords] = useState<BatchingRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [newRecord, setNewRecord] = useState<Partial<BatchingRecord>>({
     date: new Date().toISOString().split('T')[0],
     batchNo: "",
@@ -163,7 +166,72 @@ export default function ProductionReportPage() {
     setNewRecord(prev => ({ ...prev, totalCost, costPerKg }));
   }, [newRecord.totalFuelCost, newRecord.labourCost, newRecord.shiftingCost, newRecord.outputAfterCooking]);
 
-  // Calculate hours when start or end time changes
+  // Fetch records from Supabase on mount
+  useEffect(() => {
+    fetchRecords();
+  }, []);
+
+  const fetchRecords = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch production records
+      const { data: productionData, error: productionError } = await supabase
+        .from('production_records')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (productionError) throw productionError;
+      
+      // Fetch fuel entries for all records
+      const { data: fuelData, error: fuelError } = await supabase
+        .from('fuel_entries')
+        .select('*');
+      
+      if (fuelError) throw fuelError;
+      
+      // Combine data
+      const combinedRecords: BatchingRecord[] = (productionData || []).map((record: any) => ({
+        id: record.id,
+        date: record.date,
+        batchNo: record.batch_no,
+        startTime: record.start_time,
+        endTime: record.end_time,
+        totalHours: record.total_hours,
+        materialInput: record.material_input,
+        outputAfterCooking: record.output_after_cooking,
+        yieldPercentage: record.yield_percentage,
+        labourHours: record.labour_hours,
+        numberOfLabour: record.number_of_labour,
+        labourCost: record.labour_cost,
+        shiftingCost: record.shifting_cost,
+        totalCost: record.total_cost,
+        costPerKg: record.cost_per_kg,
+        fuels: (fuelData || [])
+          .filter((f: any) => f.record_id === record.id)
+          .map((f: any) => ({
+            id: f.id,
+            fuelType: f.fuel_type,
+            fuelWeight: f.fuel_weight,
+            fuelCost: f.fuel_cost,
+          })),
+        totalFuelCost: (fuelData || [])
+          .filter((f: any) => f.record_id === record.id)
+          .reduce((sum: number, f: any) => sum + f.fuel_cost, 0),
+        totalFuelWeight: (fuelData || [])
+          .filter((f: any) => f.record_id === record.id)
+          .reduce((sum: number, f: any) => sum + f.fuel_weight, 0),
+      }));
+      
+      setRecords(combinedRecords);
+    } catch (error) {
+      console.error('Error fetching records:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Save record to Supabase
   const calculateHours = (start: string, end: string): number => {
     if (!start || !end) return 0;
     
@@ -188,50 +256,81 @@ export default function ProductionReportPage() {
     }
   }, [newRecord.startTime, newRecord.endTime]);
 
-  const handleAddRecord = () => {
+  const handleAddRecord = async () => {
     if (!newRecord.batchNo || !newRecord.startTime || !newRecord.endTime) return;
     
-    const record: BatchingRecord = {
-      id: Date.now().toString(),
-      date: newRecord.date || new Date().toISOString().split('T')[0],
-      batchNo: newRecord.batchNo,
-      startTime: newRecord.startTime,
-      endTime: newRecord.endTime,
-      totalHours: newRecord.totalHours || 0,
-      fuels: newRecord.fuels || [],
-      totalFuelCost: newRecord.totalFuelCost || 0,
-      totalFuelWeight: newRecord.totalFuelWeight || 0,
-      materialInput: newRecord.materialInput || 0,
-      outputAfterCooking: newRecord.outputAfterCooking || 0,
-      yieldPercentage: newRecord.yieldPercentage || 0,
-      labourHours: newRecord.labourHours || 0,
-      numberOfLabour: newRecord.numberOfLabour || 1,
-      labourCost: newRecord.labourCost || 0,
-      shiftingCost: newRecord.shiftingCost || 0,
-      totalCost: newRecord.totalCost || 0,
-      costPerKg: newRecord.costPerKg || 0,
-    };
+    setSaving(true);
     
-    setRecords([...records, record]);
-    setNewRecord({
-      date: new Date().toISOString().split('T')[0],
-      batchNo: "",
-      startTime: "",
-      endTime: "",
-      totalHours: 0,
-      fuels: [],
-      totalFuelCost: 0,
-      totalFuelWeight: 0,
-      materialInput: 0,
-      outputAfterCooking: 0,
-      yieldPercentage: 0,
-      labourHours: 0,
-      numberOfLabour: 1,
-      labourCost: 0,
-      shiftingCost: 0,
-      totalCost: 0,
-      costPerKg: 0,
-    });
+    try {
+      // Insert production record
+      const { data: recordData, error: recordError } = await supabase
+        .from('production_records')
+        .insert({
+          date: newRecord.date || new Date().toISOString().split('T')[0],
+          batch_no: newRecord.batchNo,
+          start_time: newRecord.startTime,
+          end_time: newRecord.endTime,
+          total_hours: newRecord.totalHours || 0,
+          material_input: newRecord.materialInput || 0,
+          output_after_cooking: newRecord.outputAfterCooking || 0,
+          yield_percentage: newRecord.yieldPercentage || 0,
+          labour_hours: newRecord.labourHours || 0,
+          number_of_labour: newRecord.numberOfLabour || 1,
+          labour_cost: newRecord.labourCost || 0,
+          shifting_cost: newRecord.shiftingCost || 0,
+          total_cost: newRecord.totalCost || 0,
+          cost_per_kg: newRecord.costPerKg || 0,
+        })
+        .select()
+        .single();
+      
+      if (recordError) throw recordError;
+      
+      // Insert fuel entries if any
+      if (newRecord.fuels && newRecord.fuels.length > 0) {
+        const fuelInserts = newRecord.fuels.map(fuel => ({
+          record_id: recordData.id,
+          fuel_type: fuel.fuelType,
+          fuel_weight: fuel.fuelWeight,
+          fuel_cost: fuel.fuelCost,
+        }));
+        
+        const { error: fuelError } = await supabase
+          .from('fuel_entries')
+          .insert(fuelInserts);
+        
+        if (fuelError) throw fuelError;
+      }
+      
+      // Refresh records
+      await fetchRecords();
+      
+      // Reset form
+      setNewRecord({
+        date: new Date().toISOString().split('T')[0],
+        batchNo: "",
+        startTime: "",
+        endTime: "",
+        totalHours: 0,
+        fuels: [],
+        totalFuelCost: 0,
+        totalFuelWeight: 0,
+        materialInput: 0,
+        outputAfterCooking: 0,
+        yieldPercentage: 0,
+        labourHours: 0,
+        numberOfLabour: 1,
+        labourCost: 0,
+        shiftingCost: 0,
+        totalCost: 0,
+        costPerKg: 0,
+      });
+    } catch (error) {
+      console.error('Error saving record:', error);
+      alert('Failed to save record. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -552,10 +651,13 @@ export default function ProductionReportPage() {
             <Button 
               onClick={handleAddRecord}
               className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
-              disabled={!newRecord.batchNo || !newRecord.startTime || !newRecord.endTime}
+              disabled={!newRecord.batchNo || !newRecord.startTime || !newRecord.endTime || saving}
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Record
+              {saving ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</>
+              ) : (
+                <><Plus className="h-4 w-4 mr-2" /> Add Record</>
+              )}
             </Button>
           </CardContent>
         </Card>
@@ -582,7 +684,14 @@ export default function ProductionReportPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {records.length === 0 ? (
+                {loading ? (
+                  <TableRow>
+                    <td colSpan={10} className="text-center py-8 text-slate-500">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                      Loading records...
+                    </td>
+                  </TableRow>
+                ) : records.length === 0 ? (
                   <TableRow>
                     <td colSpan={10} className="text-center py-8 text-slate-500">
                       No records yet. Add your first batching record above.
