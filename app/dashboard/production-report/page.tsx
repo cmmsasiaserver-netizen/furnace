@@ -391,25 +391,44 @@ export default function ProductionReportPage() {
     }
 
     // Prepare data for export
-    const exportData = records.map((record) => ({
-      Date: record.date,
-      "Batch No": record.batchNo,
-      "Start Time": record.startTime,
-      "End Time": record.endTime,
-      "Total Hours": record.totalHours,
-      "Material Input (kg)": record.materialInput,
-      "Output After Cooking (kg)": record.outputAfterCooking,
-      "Yield %": record.yieldPercentage,
-      "Fuel Types": record.fuels.map((f) => FUEL_LABELS[f.fuelType]).join(", "),
-      "Total Fuel Weight (kg)": record.totalFuelWeight,
-      "Total Fuel Cost": record.totalFuelCost,
-      "Labour Hours": record.labourHours,
-      "Number of Labour": record.numberOfLabour,
-      "Labour Cost": record.labourCost,
-      "Shifting Cost": record.shiftingCost,
-      "Total Cost": record.totalCost,
-      "Cost per kg": record.costPerKg,
-    }));
+    const exportData = records.map((record) => {
+      // Calculate fuel weights for each type
+      const woodWeight = record.fuels
+        .filter((f) => f.fuelType === "wood")
+        .reduce((sum, f) => sum + (f.fuelWeight || 0), 0);
+      const pelletWeight = record.fuels
+        .filter((f) => f.fuelType === "pellet")
+        .reduce((sum, f) => sum + (f.fuelWeight || 0), 0);
+      const fibreWeight = record.fuels
+        .filter((f) => f.fuelType === "fibre")
+        .reduce((sum, f) => sum + (f.fuelWeight || 0), 0);
+      const woodHuskWeight = record.fuels
+        .filter((f) => f.fuelType === "wood-husk")
+        .reduce((sum, f) => sum + (f.fuelWeight || 0), 0);
+      const otherFuelTotal = fibreWeight + woodHuskWeight;
+
+      return {
+        Date: record.date,
+        "Batch No": record.batchNo,
+        "Start Time": record.startTime,
+        "End Time": record.endTime,
+        "Total Hours": record.totalHours,
+        "Material Input (kg)": record.materialInput,
+        "Output After Cooking (kg)": record.outputAfterCooking,
+        "Yield %": record.yieldPercentage,
+        "Wood (kg)": woodWeight || 0,
+        "Pellet (kg)": pelletWeight || 0,
+        "Other Fuel (kg)": otherFuelTotal || 0,
+        "Total Fuel Weight (kg)": record.totalFuelWeight || 0,
+        "Total Fuel Cost": record.totalFuelCost || 0,
+        "Labour Hours": record.labourHours,
+        "Number of Labour": record.numberOfLabour,
+        "Labour Cost": record.labourCost,
+        "Shifting Cost": record.shiftingCost,
+        "Total Cost": record.totalCost,
+        "Cost per kg": record.costPerKg,
+      };
+    });
 
     // Create worksheet
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -424,7 +443,9 @@ export default function ProductionReportPage() {
       { wch: 20 }, // Material Input
       { wch: 25 }, // Output After Cooking
       { wch: 10 }, // Yield %
-      { wch: 30 }, // Fuel Types
+      { wch: 12 }, // Wood
+      { wch: 12 }, // Pellet
+      { wch: 15 }, // Other Fuel
       { wch: 20 }, // Total Fuel Weight
       { wch: 15 }, // Total Fuel Cost
       { wch: 13 }, // Labour Hours
