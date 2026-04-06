@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, FileText, Clock, Fuel, Trash2 } from "lucide-react";
+import { Plus, FileText, Clock, Fuel, Trash2, Package, Users, TrendingUp, DollarSign } from "lucide-react";
 
 type FuelType = "wood" | "pellet" | "fibre" | "wood-husk";
 
@@ -25,6 +25,8 @@ const FUEL_LABELS: Record<FuelType, string> = {
   fibre: "Fibre",
   "wood-husk": "Wood Husk",
 };
+
+const LABOUR_RATE_PER_HOUR = 168.75;
 
 interface FuelEntry {
   id: string;
@@ -43,6 +45,15 @@ interface BatchingRecord {
   fuels: FuelEntry[];
   totalFuelCost: number;
   totalFuelWeight: number;
+  materialInput: number;
+  outputAfterCooking: number;
+  yieldPercentage: number;
+  labourHours: number;
+  numberOfLabour: number;
+  labourCost: number;
+  shiftingCost: number;
+  totalCost: number;
+  costPerKg: number;
 }
 
 export default function ProductionReportPage() {
@@ -55,6 +66,15 @@ export default function ProductionReportPage() {
     fuels: [],
     totalFuelCost: 0,
     totalFuelWeight: 0,
+    materialInput: 0,
+    outputAfterCooking: 0,
+    yieldPercentage: 0,
+    labourHours: 0,
+    numberOfLabour: 1,
+    labourCost: 0,
+    shiftingCost: 0,
+    totalCost: 0,
+    costPerKg: 0,
   });
 
   // Add a new fuel entry
@@ -102,15 +122,46 @@ export default function ProductionReportPage() {
   // Calculate totals whenever fuels change
   useEffect(() => {
     if (newRecord.fuels) {
-      const totalCost = newRecord.fuels.reduce((acc, f) => acc + f.fuelCost, 0);
-      const totalWeight = newRecord.fuels.reduce((acc, f) => acc + f.fuelWeight, 0);
+      const totalFuelCost = newRecord.fuels.reduce((acc, f) => acc + f.fuelCost, 0);
+      const totalFuelWeight = newRecord.fuels.reduce((acc, f) => acc + f.fuelWeight, 0);
       setNewRecord(prev => ({
         ...prev,
-        totalFuelCost: totalCost,
-        totalFuelWeight: totalWeight,
+        totalFuelCost,
+        totalFuelWeight,
       }));
     }
   }, [newRecord.fuels]);
+
+  // Calculate yield percentage when input or output changes
+  useEffect(() => {
+    const input = newRecord.materialInput || 0;
+    const output = newRecord.outputAfterCooking || 0;
+    if (input > 0 && output > 0) {
+      const yieldPercentage = Math.round((output / input) * 100 * 100) / 100;
+      setNewRecord(prev => ({ ...prev, yieldPercentage }));
+    }
+  }, [newRecord.materialInput, newRecord.outputAfterCooking]);
+
+  // Calculate labour cost when labour hours or number of labour changes
+  useEffect(() => {
+    const hours = newRecord.labourHours || 0;
+    const count = newRecord.numberOfLabour || 0;
+    const labourCost = Math.round(hours * count * LABOUR_RATE_PER_HOUR * 100) / 100;
+    setNewRecord(prev => ({ ...prev, labourCost }));
+  }, [newRecord.labourHours, newRecord.numberOfLabour]);
+
+  // Calculate total cost and cost per kg
+  useEffect(() => {
+    const fuelCost = newRecord.totalFuelCost || 0;
+    const labourCost = newRecord.labourCost || 0;
+    const shiftingCost = newRecord.shiftingCost || 0;
+    const totalCost = Math.round((fuelCost + labourCost + shiftingCost) * 100) / 100;
+    
+    const output = newRecord.outputAfterCooking || 0;
+    const costPerKg = output > 0 ? Math.round((totalCost / output) * 100) / 100 : 0;
+    
+    setNewRecord(prev => ({ ...prev, totalCost, costPerKg }));
+  }, [newRecord.totalFuelCost, newRecord.labourCost, newRecord.shiftingCost, newRecord.outputAfterCooking]);
 
   // Calculate hours when start or end time changes
   const calculateHours = (start: string, end: string): number => {
@@ -150,6 +201,15 @@ export default function ProductionReportPage() {
       fuels: newRecord.fuels || [],
       totalFuelCost: newRecord.totalFuelCost || 0,
       totalFuelWeight: newRecord.totalFuelWeight || 0,
+      materialInput: newRecord.materialInput || 0,
+      outputAfterCooking: newRecord.outputAfterCooking || 0,
+      yieldPercentage: newRecord.yieldPercentage || 0,
+      labourHours: newRecord.labourHours || 0,
+      numberOfLabour: newRecord.numberOfLabour || 1,
+      labourCost: newRecord.labourCost || 0,
+      shiftingCost: newRecord.shiftingCost || 0,
+      totalCost: newRecord.totalCost || 0,
+      costPerKg: newRecord.costPerKg || 0,
     };
     
     setRecords([...records, record]);
@@ -162,6 +222,15 @@ export default function ProductionReportPage() {
       fuels: [],
       totalFuelCost: 0,
       totalFuelWeight: 0,
+      materialInput: 0,
+      outputAfterCooking: 0,
+      yieldPercentage: 0,
+      labourHours: 0,
+      numberOfLabour: 1,
+      labourCost: 0,
+      shiftingCost: 0,
+      totalCost: 0,
+      costPerKg: 0,
     });
   };
 
@@ -336,6 +405,149 @@ export default function ProductionReportPage() {
                 </div>
               )}
             </div>
+
+            {/* Material Section */}
+            <div className="border-t border-slate-200 pt-4 mb-4">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                <Package className="h-4 w-4 text-blue-600" />
+                Material Input & Output
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div className="space-y-2">
+                  <Label htmlFor="materialInput" className="text-sm font-medium">Material Input (kg)</Label>
+                  <Input
+                    id="materialInput"
+                    type="number"
+                    placeholder="Enter input weight..."
+                    value={newRecord.materialInput || ""}
+                    onChange={(e) => setNewRecord({ ...newRecord, materialInput: parseFloat(e.target.value) || 0 })}
+                    className="h-11"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="outputAfterCooking" className="text-sm font-medium">Output After Cooking (kg)</Label>
+                  <Input
+                    id="outputAfterCooking"
+                    type="number"
+                    placeholder="Enter output weight..."
+                    value={newRecord.outputAfterCooking || ""}
+                    onChange={(e) => setNewRecord({ ...newRecord, outputAfterCooking: parseFloat(e.target.value) || 0 })}
+                    className="h-11"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-1">
+                    <TrendingUp className="h-4 w-4 text-emerald-600" />
+                    Yield % (Auto)
+                  </Label>
+                  <div className="h-11 flex items-center px-3 bg-emerald-50 rounded-md font-bold text-emerald-700">
+                    {newRecord.yieldPercentage?.toFixed(2) || "0.00"}%
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Weight Loss (kg)</Label>
+                  <div className="h-11 flex items-center px-3 bg-slate-100 rounded-md font-semibold text-slate-700">
+                    {((newRecord.materialInput || 0) - (newRecord.outputAfterCooking || 0)).toFixed(2)} kg
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Labour Section */}
+            <div className="border-t border-slate-200 pt-4 mb-4">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                <Users className="h-4 w-4 text-indigo-600" />
+                Labour Cost (Rs. {LABOUR_RATE_PER_HOUR}/hour)
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div className="space-y-2">
+                  <Label htmlFor="labourHours" className="text-sm font-medium">Labour Hours</Label>
+                  <Input
+                    id="labourHours"
+                    type="number"
+                    step="0.5"
+                    placeholder="Enter hours..."
+                    value={newRecord.labourHours || ""}
+                    onChange={(e) => setNewRecord({ ...newRecord, labourHours: parseFloat(e.target.value) || 0 })}
+                    className="h-11"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="numberOfLabour" className="text-sm font-medium">No. of Labour</Label>
+                  <Input
+                    id="numberOfLabour"
+                    type="number"
+                    min="1"
+                    placeholder="Enter count..."
+                    value={newRecord.numberOfLabour || ""}
+                    onChange={(e) => setNewRecord({ ...newRecord, numberOfLabour: parseInt(e.target.value) || 1 })}
+                    className="h-11"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Rate per Hour</Label>
+                  <div className="h-11 flex items-center px-3 bg-slate-100 rounded-md font-semibold text-slate-700">
+                    Rs. {LABOUR_RATE_PER_HOUR.toFixed(2)}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-1">
+                    <DollarSign className="h-4 w-4 text-indigo-600" />
+                    Labour Cost (Auto)
+                  </Label>
+                  <div className="h-11 flex items-center px-3 bg-indigo-50 rounded-md font-bold text-indigo-700">
+                    Rs. {newRecord.labourCost?.toFixed(2) || "0.00"}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Shifting Cost Section */}
+            <div className="border-t border-slate-200 pt-4 mb-4">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-purple-600" />
+                Other Costs
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div className="space-y-2">
+                  <Label htmlFor="shiftingCost" className="text-sm font-medium">Shifting Cost (Rs.)</Label>
+                  <Input
+                    id="shiftingCost"
+                    type="number"
+                    placeholder="Enter shifting cost..."
+                    value={newRecord.shiftingCost || ""}
+                    onChange={(e) => setNewRecord({ ...newRecord, shiftingCost: parseFloat(e.target.value) || 0 })}
+                    className="h-11"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-1">
+                    <DollarSign className="h-4 w-4 text-rose-600" />
+                    Total Cost (Auto)
+                  </Label>
+                  <div className="h-11 flex items-center px-3 bg-rose-50 rounded-md font-bold text-rose-700">
+                    Rs. {newRecord.totalCost?.toFixed(2) || "0.00"}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-1">
+                    <TrendingUp className="h-4 w-4 text-blue-600" />
+                    Cost per kg (Auto)
+                  </Label>
+                  <div className="h-11 flex items-center px-3 bg-blue-50 rounded-md font-bold text-blue-700">
+                    Rs. {newRecord.costPerKg?.toFixed(2) || "0.00"}/kg
+                  </div>
+                </div>
+              </div>
+            </div>
             
             <Button 
               onClick={handleAddRecord}
@@ -359,18 +571,20 @@ export default function ProductionReportPage() {
                 <TableRow className="bg-slate-50">
                   <TableHead className="font-bold text-slate-700">Date</TableHead>
                   <TableHead className="font-bold text-slate-700">Batch No</TableHead>
-                  <TableHead className="font-bold text-slate-700">Start Time</TableHead>
-                  <TableHead className="font-bold text-slate-700">End Time</TableHead>
-                  <TableHead className="font-bold text-slate-700">Total Hours</TableHead>
-                  <TableHead className="font-bold text-slate-700">Fuels Used</TableHead>
-                  <TableHead className="font-bold text-slate-700">Total Fuel (kg)</TableHead>
-                  <TableHead className="font-bold text-slate-700">Total Fuel Cost</TableHead>
+                  <TableHead className="font-bold text-slate-700">Time</TableHead>
+                  <TableHead className="font-bold text-slate-700">Hours</TableHead>
+                  <TableHead className="font-bold text-slate-700">Input/Output</TableHead>
+                  <TableHead className="font-bold text-slate-700">Yield %</TableHead>
+                  <TableHead className="font-bold text-slate-700">Fuels</TableHead>
+                  <TableHead className="font-bold text-slate-700">Labour Cost</TableHead>
+                  <TableHead className="font-bold text-slate-700">Total Cost</TableHead>
+                  <TableHead className="font-bold text-slate-700">Cost/kg</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {records.length === 0 ? (
                   <TableRow>
-                    <td colSpan={8} className="text-center py-8 text-slate-500">
+                    <td colSpan={10} className="text-center py-8 text-slate-500">
                       No records yet. Add your first batching record above.
                     </td>
                   </TableRow>
@@ -379,23 +593,34 @@ export default function ProductionReportPage() {
                     <TableRow key={record.id} className="hover:bg-slate-50/50">
                       <TableCell className="font-medium">{record.date}</TableCell>
                       <TableCell className="text-blue-600 font-semibold">{record.batchNo}</TableCell>
-                      <TableCell>{record.startTime}</TableCell>
-                      <TableCell>{record.endTime}</TableCell>
+                      <TableCell className="text-xs">{record.startTime} - {record.endTime}</TableCell>
                       <TableCell className="font-bold text-emerald-600">
                         {record.totalHours.toFixed(2)} hrs
                       </TableCell>
+                      <TableCell className="text-xs">
+                        <div>In: {record.materialInput.toFixed(1)}kg</div>
+                        <div>Out: {record.outputAfterCooking.toFixed(1)}kg</div>
+                      </TableCell>
+                      <TableCell className="font-bold text-emerald-600">
+                        {record.yieldPercentage.toFixed(1)}%
+                      </TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-1 max-w-[150px]">
                           {record.fuels.map((fuel) => (
-                            <span key={fuel.id} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-700">
-                              {FUEL_LABELS[fuel.fuelType]}: {fuel.fuelWeight.toFixed(1)}kg
+                            <span key={fuel.id} className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-700">
+                              {FUEL_LABELS[fuel.fuelType]}: {fuel.fuelWeight.toFixed(0)}kg
                             </span>
                           ))}
                         </div>
                       </TableCell>
-                      <TableCell className="font-semibold">{record.totalFuelWeight.toFixed(2)} kg</TableCell>
-                      <TableCell className="font-bold text-amber-600">
-                        Rs. {record.totalFuelCost.toFixed(2)}
+                      <TableCell className="font-semibold text-indigo-600">
+                        Rs. {record.labourCost.toFixed(0)}
+                      </TableCell>
+                      <TableCell className="font-bold text-rose-600">
+                        Rs. {record.totalCost.toFixed(0)}
+                      </TableCell>
+                      <TableCell className="font-bold text-blue-600">
+                        Rs. {record.costPerKg.toFixed(2)}
                       </TableCell>
                     </TableRow>
                   ))
@@ -407,7 +632,7 @@ export default function ProductionReportPage() {
 
         {/* Summary Stats */}
         {records.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mt-6">
             <Card className="border-none shadow">
               <CardContent className="p-4 flex items-center justify-between">
                 <div>
@@ -428,7 +653,7 @@ export default function ProductionReportPage() {
                     {records.reduce((acc, r) => acc + r.totalHours, 0).toFixed(2)}
                   </p>
                 </div>
-                <div className="h-10 w-10 bg-emerald-100 rounded-full flex items-center justify-between">
+                <div className="h-10 w-10 bg-emerald-100 rounded-full flex items-center justify-center">
                   <Clock className="h-5 w-5 text-emerald-600" />
                 </div>
               </CardContent>
@@ -437,13 +662,41 @@ export default function ProductionReportPage() {
             <Card className="border-none shadow">
               <CardContent className="p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-500">Total Fuel Used</p>
+                  <p className="text-sm text-slate-500">Avg Yield %</p>
                   <p className="text-2xl font-bold text-slate-900">
-                    {records.reduce((acc, r) => acc + r.totalFuelWeight, 0).toFixed(2)} kg
+                    {(records.reduce((acc, r) => acc + r.yieldPercentage, 0) / records.length).toFixed(1)}%
+                  </p>
+                </div>
+                <div className="h-10 w-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                  <TrendingUp className="h-5 w-5 text-emerald-600" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-none shadow">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-slate-500">Total Output</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    {records.reduce((acc, r) => acc + r.outputAfterCooking, 0).toFixed(0)} kg
                   </p>
                 </div>
                 <div className="h-10 w-10 bg-amber-100 rounded-full flex items-center justify-center">
-                  <Fuel className="h-5 w-5 text-amber-600" />
+                  <Package className="h-5 w-5 text-amber-600" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-none shadow">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-slate-500">Total Labour Cost</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    Rs. {records.reduce((acc, r) => acc + r.labourCost, 0).toFixed(0)}
+                  </p>
+                </div>
+                <div className="h-10 w-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                  <Users className="h-5 w-5 text-indigo-600" />
                 </div>
               </CardContent>
             </Card>
@@ -451,13 +704,13 @@ export default function ProductionReportPage() {
             <Card className="border-none shadow">
               <CardContent className="p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-500">Total Fuel Cost</p>
+                  <p className="text-sm text-slate-500">Total Cost</p>
                   <p className="text-2xl font-bold text-slate-900">
-                    Rs. {records.reduce((acc, r) => acc + r.totalFuelCost, 0).toFixed(2)}
+                    Rs. {records.reduce((acc, r) => acc + r.totalCost, 0).toFixed(0)}
                   </p>
                 </div>
                 <div className="h-10 w-10 bg-rose-100 rounded-full flex items-center justify-center">
-                  <Fuel className="h-5 w-5 text-rose-600" />
+                  <DollarSign className="h-5 w-5 text-rose-600" />
                 </div>
               </CardContent>
             </Card>
