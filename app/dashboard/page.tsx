@@ -8,7 +8,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line
 } from "recharts";
 import {
-  TrendingUp, TrendingDown, Package, DollarSign, Activity, Layers, Search, Clock, FileText, Loader2
+  TrendingUp, TrendingDown, Package, DollarSign, Activity, Layers, Search, Clock, FileText, Loader2, Database
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import { supabase } from "@/lib/supabase";
 
 export default function DashboardPage() {
   const [records, setRecords] = useState<any[]>([]);
+  const [stockBalance, setStockBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
@@ -91,10 +92,30 @@ export default function DashboardPage() {
       });
       
       setRecords(combinedRecords);
+      
+      // Fetch MGCO3 stock balance
+      await fetchStockBalance();
     } catch (error) {
       console.error('Error fetching records:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStockBalance = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('mgco3_stock')
+        .select('stock_added, stock_consumed');
+      
+      if (error) throw error;
+      
+      const balance = (data || []).reduce((acc: number, r: any) => 
+        acc + (r.stock_added || 0) - (r.stock_consumed || 0), 0
+      );
+      setStockBalance(balance);
+    } catch (error) {
+      console.error('Error fetching stock balance:', error);
     }
   };
 
@@ -120,7 +141,7 @@ export default function DashboardPage() {
     { label: "Total Output", value: `${totalOutput.toLocaleString()} kg`, sub: "Net Production", icon: Package, color: "bg-emerald-600" },
     { label: "Average Yield", value: `${avgYield ? avgYield.toFixed(1) : 0}%`, sub: "Efficiency Rate", icon: Activity, color: "bg-amber-600" },
     { label: "Total Production Cost", value: `Rs. ${totalCost.toLocaleString()}`, sub: "Operating Expenses", icon: DollarSign, color: "bg-rose-600" },
-    { label: "Avg Cost per kg", value: `Rs. ${(totalCost / totalOutput || 0).toFixed(2)}`, sub: "Unit Cost", icon: TrendingUp, color: "bg-slate-800" },
+    { label: "MGCO3 Stock", value: `${stockBalance.toFixed(0)} kg`, sub: "Available Stone", icon: Database, color: stockBalance < 100 ? "bg-rose-600" : "bg-cyan-600" },
   ];
 
   return (
