@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMGOStore } from "@/lib/store";
+import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -43,7 +44,9 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 flex flex-col gap-6 font-sans">
+    <div className="min-h-screen flex">
+      <DashboardSidebar activeItem="overview" />
+      <div className="flex-1 bg-slate-50 p-6 flex flex-col gap-6 font-sans overflow-auto">
       {/* Header */}
       <div className="bg-slate-900 text-white rounded-2xl p-8 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 opacity-10 p-10">
@@ -202,6 +205,7 @@ export default function DashboardPage() {
 
       <div className="flex justify-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-4">
         © 2026 MGO Management Software • Asia Poultry Feeds
+      </div>
       </div>
     </div>
   );
