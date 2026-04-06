@@ -12,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Building2, Factory, Warehouse, Truck } from "lucide-react";
 
 export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
@@ -23,13 +22,14 @@ export default function LoginPage() {
       <div className="hidden lg:flex lg:w-1/2 bg-slate-900 flex-col items-center justify-center px-12 relative">
         {/* Logo */}
         <div className="mb-8">
-          <div className="w-24 h-24 bg-white rounded-xl flex items-center justify-center shadow-lg">
-            <div className="text-center">
-              <div className="text-xs font-semibold text-slate-800 leading-tight">
-                Asia Poultry
-              </div>
-              <div className="text-[8px] text-slate-600">Feeds</div>
-            </div>
+          <div className="w-24 h-24 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
+            <svg viewBox="0 0 200 200" className="w-full h-full p-2">
+              {/* Asia Poultry Feeds Logo - Abstract triangle shapes */}
+              <polygon points="100,40 140,140 60,140" fill="#FF6B35" opacity="0.9" />
+              <polygon points="100,40 160,160 80,160" fill="#F7931E" opacity="0.7" />
+              <polygon points="100,40 120,160 40,160" fill="#C1272D" opacity="0.6" />
+              <polygon points="100,40 100,160 20,160" fill="#00A651" opacity="0.5" />
+            </svg>
           </div>
         </div>
 
@@ -50,25 +50,6 @@ export default function LoginPage() {
           Advanced Computerized Maintenance Management System for modern
           industrial excellence.
         </p>
-
-        {/* Company Units */}
-        <div className="absolute bottom-12 flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-slate-800/50 px-4 py-2 rounded-full">
-            <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-              <Building2 className="w-4 h-4 text-white" />
-            </div>
-            <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-              <Factory className="w-4 h-4 text-white" />
-            </div>
-            <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center">
-              <Warehouse className="w-4 h-4 text-white" />
-            </div>
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-              <Truck className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-xs text-slate-400 ml-2">Trusted by all units</span>
-          </div>
-        </div>
       </div>
 
       {/* Right Side - Login Form */}
@@ -92,10 +73,8 @@ export default function LoginPage() {
                   <SelectValue placeholder="Select user..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Administrator</SelectItem>
-                  <SelectItem value="manager">Maintenance Manager</SelectItem>
-                  <SelectItem value="supervisor">Supervisor</SelectItem>
-                  <SelectItem value="technician">Technician</SelectItem>
+                  <SelectItem value="tdm">TDM</SelectItem>
+                  <SelectItem value="furnace-incharge">Furnace Incharge</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -108,7 +87,7 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter password..."
+                defaultValue="demo123"
                 className="h-11 bg-slate-50 border-slate-200"
               />
             </div>
