@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LayoutDashboard, BarChart3, FileText, LogOut, ChevronRight } from "lucide-react";
+import { LayoutDashboard, BarChart3, FileText, LogOut, ChevronRight, Layers, Database } from "lucide-react";
 
 interface SidebarProps {
   activeItem?: string;
@@ -26,6 +26,7 @@ export function DashboardSidebar({ activeItem = "overview" }: SidebarProps) {
       color: "text-yellow-400",
       items: [
         { id: "production-report", label: "Production Report", icon: FileText, path: "/dashboard/production-report" },
+        { id: "mgco3-stock", label: "MGCO3 Stock", icon: Database, path: "/dashboard/mgco3-stock" },
       ],
     },
   ];
