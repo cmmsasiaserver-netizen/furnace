@@ -418,7 +418,7 @@ export default function ProductionReportPage() {
         "Yield %": record.yieldPercentage,
         "Wood (kg)": woodWeight || 0,
         "Pellet (kg)": pelletWeight || 0,
-        "Other Fuel (kg)": otherFuelTotal || 0,
+        "Total (kg)": otherFuelTotal || 0,
         "Total Fuel Weight (kg)": record.totalFuelWeight || 0,
         "Total Fuel Cost": record.totalFuelCost || 0,
         "Labour Hours": record.labourHours,
@@ -445,7 +445,7 @@ export default function ProductionReportPage() {
       { wch: 10 }, // Yield %
       { wch: 12 }, // Wood
       { wch: 12 }, // Pellet
-      { wch: 15 }, // Other Fuel
+      { wch: 12 }, // Total
       { wch: 20 }, // Total Fuel Weight
       { wch: 15 }, // Total Fuel Cost
       { wch: 13 }, // Labour Hours
