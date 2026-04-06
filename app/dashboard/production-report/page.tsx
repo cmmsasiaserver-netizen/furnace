@@ -7,7 +7,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, FileText, Clock } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, FileText, Clock, Fuel } from "lucide-react";
+
+type FuelType = "wood" | "pellet" | "fibre" | "wood-husk";
+
+const FUEL_PRICES: Record<FuelType, number> = {
+  wood: 25,
+  pellet: 52,
+  fibre: 12,
+  "wood-husk": 14.25,
+};
+
+const FUEL_LABELS: Record<FuelType, string> = {
+  wood: "Wood",
+  pellet: "Pellet",
+  fibre: "Fibre",
+  "wood-husk": "Wood Husk",
+};
 
 interface BatchingRecord {
   id: string;
@@ -16,6 +33,9 @@ interface BatchingRecord {
   startTime: string;
   endTime: string;
   totalHours: number;
+  fuelType: FuelType;
+  fuelWeight: number;
+  fuelCost: number;
 }
 
 export default function ProductionReportPage() {
@@ -25,6 +45,9 @@ export default function ProductionReportPage() {
     batchNo: "",
     startTime: "",
     endTime: "",
+    fuelType: "wood",
+    fuelWeight: 0,
+    fuelCost: 0,
   });
 
   // Calculate hours when start or end time changes
@@ -45,6 +68,19 @@ export default function ProductionReportPage() {
     return Math.round(hours * 100) / 100; // Round to 2 decimal places
   };
 
+  // Calculate fuel cost when fuel type or weight changes
+  const calculateFuelCost = (fuelType: FuelType, fuelWeight: number): number => {
+    if (!fuelType || !fuelWeight) return 0;
+    return Math.round(fuelWeight * FUEL_PRICES[fuelType] * 100) / 100;
+  };
+
+  useEffect(() => {
+    if (newRecord.fuelType && newRecord.fuelWeight !== undefined) {
+      const cost = calculateFuelCost(newRecord.fuelType, newRecord.fuelWeight);
+      setNewRecord(prev => ({ ...prev, fuelCost: cost }));
+    }
+  }, [newRecord.fuelType, newRecord.fuelWeight]);
+
   useEffect(() => {
     if (newRecord.startTime && newRecord.endTime) {
       const hours = calculateHours(newRecord.startTime, newRecord.endTime);
@@ -62,6 +98,9 @@ export default function ProductionReportPage() {
       startTime: newRecord.startTime,
       endTime: newRecord.endTime,
       totalHours: newRecord.totalHours || 0,
+      fuelType: newRecord.fuelType || "wood",
+      fuelWeight: newRecord.fuelWeight || 0,
+      fuelCost: newRecord.fuelCost || 0,
     };
     
     setRecords([...records, record]);
@@ -71,6 +110,9 @@ export default function ProductionReportPage() {
       startTime: "",
       endTime: "",
       totalHours: 0,
+      fuelType: "wood",
+      fuelWeight: 0,
+      fuelCost: 0,
     });
   };
 
@@ -96,7 +138,7 @@ export default function ProductionReportPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end mb-4">
               <div className="space-y-2">
                 <Label htmlFor="date" className="text-sm font-medium">Date</Label>
                 <Input
@@ -151,6 +193,62 @@ export default function ProductionReportPage() {
                 </div>
               </div>
             </div>
+
+            {/* Fuel Section */}
+            <div className="border-t border-slate-200 pt-4 mb-4">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                <Fuel className="h-4 w-4 text-amber-600" />
+                Fuel Usage
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div className="space-y-2">
+                  <Label htmlFor="fuelType" className="text-sm font-medium">Fuel Type</Label>
+                  <Select
+                    value={newRecord.fuelType}
+                    onValueChange={(value: FuelType) => setNewRecord({ ...newRecord, fuelType: value })}
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Select fuel..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="wood">Wood (Rs. 25/kg)</SelectItem>
+                      <SelectItem value="pellet">Pellet (Rs. 52/kg)</SelectItem>
+                      <SelectItem value="fibre">Fibre (Rs. 12/kg)</SelectItem>
+                      <SelectItem value="wood-husk">Wood Husk (Rs. 14.25/kg)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="fuelWeight" className="text-sm font-medium">Fuel Weight (kg)</Label>
+                  <Input
+                    id="fuelWeight"
+                    type="number"
+                    placeholder="Enter weight..."
+                    value={newRecord.fuelWeight || ""}
+                    onChange={(e) => setNewRecord({ ...newRecord, fuelWeight: parseFloat(e.target.value) || 0 })}
+                    className="h-11"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Price per kg</Label>
+                  <div className="h-11 flex items-center px-3 bg-slate-100 rounded-md font-semibold text-slate-700">
+                    Rs. {newRecord.fuelType ? FUEL_PRICES[newRecord.fuelType].toFixed(2) : "0.00"}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-1">
+                    <Fuel className="h-4 w-4 text-amber-600" />
+                    Total Fuel Cost (Auto)
+                  </Label>
+                  <div className="h-11 flex items-center px-3 bg-amber-50 rounded-md font-bold text-amber-700">
+                    Rs. {newRecord.fuelCost?.toFixed(2) || "0.00"}
+                  </div>
+                </div>
+              </div>
+            </div>
             
             <Button 
               onClick={handleAddRecord}
@@ -177,12 +275,15 @@ export default function ProductionReportPage() {
                   <TableHead className="font-bold text-slate-700">Start Time</TableHead>
                   <TableHead className="font-bold text-slate-700">End Time</TableHead>
                   <TableHead className="font-bold text-slate-700">Total Hours</TableHead>
+                  <TableHead className="font-bold text-slate-700">Fuel Type</TableHead>
+                  <TableHead className="font-bold text-slate-700">Fuel (kg)</TableHead>
+                  <TableHead className="font-bold text-slate-700">Fuel Cost</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {records.length === 0 ? (
                   <TableRow>
-                    <td colSpan={5} className="text-center py-8 text-slate-500">
+                    <td colSpan={8} className="text-center py-8 text-slate-500">
                       No records yet. Add your first batching record above.
                     </td>
                   </TableRow>
@@ -196,6 +297,11 @@ export default function ProductionReportPage() {
                       <TableCell className="font-bold text-emerald-600">
                         {record.totalHours.toFixed(2)} hrs
                       </TableCell>
+                      <TableCell>{FUEL_LABELS[record.fuelType]}</TableCell>
+                      <TableCell>{record.fuelWeight.toFixed(2)} kg</TableCell>
+                      <TableCell className="font-bold text-amber-600">
+                        Rs. {record.fuelCost.toFixed(2)}
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -206,7 +312,7 @@ export default function ProductionReportPage() {
 
         {/* Summary Stats */}
         {records.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
             <Card className="border-none shadow">
               <CardContent className="p-4 flex items-center justify-between">
                 <div>
@@ -227,8 +333,22 @@ export default function ProductionReportPage() {
                     {records.reduce((acc, r) => acc + r.totalHours, 0).toFixed(2)}
                   </p>
                 </div>
-                <div className="h-10 w-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                <div className="h-10 w-10 bg-emerald-100 rounded-full flex items-center justify-between">
                   <Clock className="h-5 w-5 text-emerald-600" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-none shadow">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-slate-500">Total Fuel Used</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    {records.reduce((acc, r) => acc + r.fuelWeight, 0).toFixed(2)} kg
+                  </p>
+                </div>
+                <div className="h-10 w-10 bg-amber-100 rounded-full flex items-center justify-center">
+                  <Fuel className="h-5 w-5 text-amber-600" />
                 </div>
               </CardContent>
             </Card>
@@ -236,13 +356,13 @@ export default function ProductionReportPage() {
             <Card className="border-none shadow">
               <CardContent className="p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-500">Avg Hours/Batch</p>
+                  <p className="text-sm text-slate-500">Total Fuel Cost</p>
                   <p className="text-2xl font-bold text-slate-900">
-                    {(records.reduce((acc, r) => acc + r.totalHours, 0) / records.length).toFixed(2)}
+                    Rs. {records.reduce((acc, r) => acc + r.fuelCost, 0).toFixed(2)}
                   </p>
                 </div>
-                <div className="h-10 w-10 bg-amber-100 rounded-full flex items-center justify-center">
-                  <Clock className="h-5 w-5 text-amber-600" />
+                <div className="h-10 w-10 bg-rose-100 rounded-full flex items-center justify-center">
+                  <Fuel className="h-5 w-5 text-rose-600" />
                 </div>
               </CardContent>
             </Card>
