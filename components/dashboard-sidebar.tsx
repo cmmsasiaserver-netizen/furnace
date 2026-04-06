@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { LayoutDashboard, BarChart3, FileText, LogOut, ChevronRight } from "lucide-react";
 
 interface SidebarProps {
@@ -8,25 +9,38 @@ interface SidebarProps {
 }
 
 export function DashboardSidebar({ activeItem = "overview" }: SidebarProps) {
-  const [expanded, setExpanded] = useState(true);
+  const [expandedSections, setExpandedSections] = useState<string[]>(["DASHBOARD", "REPORTS"]);
+  const router = useRouter();
 
   const menuItems = [
     {
       title: "DASHBOARD",
       color: "text-yellow-400",
       items: [
-        { id: "overview", label: "Overview", icon: LayoutDashboard },
-        { id: "executive", label: "Executive Dashboard", icon: BarChart3 },
+        { id: "overview", label: "Overview", icon: LayoutDashboard, path: "/dashboard" },
+        { id: "executive", label: "Executive Dashboard", icon: BarChart3, path: "/dashboard/executive" },
       ],
     },
     {
       title: "REPORTS",
       color: "text-yellow-400",
       items: [
-        { id: "production-report", label: "Production Report", icon: FileText },
+        { id: "production-report", label: "Production Report", icon: FileText, path: "/dashboard/production-report" },
       ],
     },
   ];
+
+  const toggleSection = (title: string) => {
+    setExpandedSections(prev => 
+      prev.includes(title) 
+        ? prev.filter(t => t !== title)
+        : [...prev, title]
+    );
+  };
+
+  const handleNavigation = (path: string) => {
+    router.push(path);
+  };
 
   return (
     <div className="w-64 min-h-screen bg-slate-900 flex flex-col border-r border-slate-800">
@@ -60,17 +74,17 @@ export function DashboardSidebar({ activeItem = "overview" }: SidebarProps) {
           <div key={section.title} className="mb-2">
             {/* Section Header */}
             <button
-              onClick={() => setExpanded(!expanded)}
+              onClick={() => toggleSection(section.title)}
               className={`w-full px-4 py-2 flex items-center justify-between text-xs font-bold tracking-wider ${section.color} hover:bg-slate-800/50 transition-colors`}
             >
               <span>{section.title}</span>
               <ChevronRight
-                className={`w-4 h-4 transition-transform ${expanded ? "rotate-90" : ""}`}
+                className={`w-4 h-4 transition-transform ${expandedSections.includes(section.title) ? "rotate-90" : ""}`}
               />
             </button>
 
             {/* Sub Items */}
-            {expanded && (
+            {expandedSections.includes(section.title) && (
               <div className="mt-1">
                 {section.items.map((item) => {
                   const Icon = item.icon;
@@ -78,7 +92,8 @@ export function DashboardSidebar({ activeItem = "overview" }: SidebarProps) {
                   return (
                     <button
                       key={item.id}
-                      className={`w-full px-4 py-2.5 flex items-center gap-3 text-sm transition-colors ${
+                      onClick={() => handleNavigation(item.path)}
+                      className={`w-full px-4 py-2.5 flex items-center gap-3 text-sm transition-colors text-left ${
                         isActive
                           ? "bg-blue-600/20 text-blue-400 border-r-2 border-blue-400"
                           : "text-slate-400 hover:text-white hover:bg-slate-800/50"
