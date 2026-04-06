@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,17 @@ import {
 
 export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("demo123");
+  const router = useRouter();
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    // Simple login check - both users can login with demo123
+    if (password === "demo123" && username) {
+      router.push("/dashboard");
+    }
+  };
 
   return (
     <div className="min-h-screen flex">
@@ -23,12 +35,14 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="mb-8">
           <div className="w-24 h-24 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
-            <svg viewBox="0 0 200 200" className="w-full h-full p-2">
-              {/* Asia Poultry Feeds Logo - Abstract triangle shapes */}
-              <polygon points="100,40 140,140 60,140" fill="#FF6B35" opacity="0.9" />
-              <polygon points="100,40 160,160 80,160" fill="#F7931E" opacity="0.7" />
-              <polygon points="100,40 120,160 40,160" fill="#C1272D" opacity="0.6" />
-              <polygon points="100,40 100,160 20,160" fill="#00A651" opacity="0.5" />
+            <svg viewBox="0 0 200 200" className="w-full h-full p-3">
+              {/* Asia Poultry Feeds Logo - Fan of colored triangles */}
+              <polygon points="30,30 100,170 70,170" fill="#4CAF50" />
+              <polygon points="30,30 120,170 90,170" fill="#8BC34A" />
+              <polygon points="30,30 140,170 110,170" fill="#FFC107" />
+              <polygon points="30,30 160,170 130,170" fill="#FF9800" />
+              <polygon points="30,30 180,170 150,170" fill="#E91E63" />
+              <polygon points="30,30 200,170 170,170" fill="#9C27B0" />
             </svg>
           </div>
         </div>
@@ -62,13 +76,13 @@ export default function LoginPage() {
             Sign in to access the maintenance management system
           </p>
 
-          <form className="space-y-5">
+          <form className="space-y-5" onSubmit={handleSubmit}>
             {/* Username */}
             <div className="space-y-2">
               <Label htmlFor="username" className="text-sm font-medium text-slate-700">
                 Username
               </Label>
-              <Select>
+              <Select value={username} onValueChange={setUsername}>
                 <SelectTrigger className="w-full h-11 bg-slate-50 border-slate-200">
                   <SelectValue placeholder="Select user..." />
                 </SelectTrigger>
@@ -87,7 +101,8 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
-                defaultValue="demo123"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="h-11 bg-slate-50 border-slate-200"
               />
             </div>
