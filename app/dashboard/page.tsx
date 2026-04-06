@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useMGOStore } from "@/lib/store";
+import { useState, useEffect } from "react";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,14 +8,95 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line
 } from "recharts";
 import {
-  TrendingUp, TrendingDown, Package, DollarSign, Activity, Layers, Search
+  TrendingUp, TrendingDown, Package, DollarSign, Activity, Layers, Search, Clock, FileText, Loader2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/lib/supabase";
 
 export default function DashboardPage() {
-  const { records } = useMGOStore();
+  const [records, setRecords] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+
+  // Fetch real-time data from Supabase
+  useEffect(() => {
+    fetchRecords();
+    
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel('production_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'production_records' },
+        () => {
+          fetchRecords();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchRecords = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch production records
+      const { data: productionData, error: productionError } = await supabase
+        .from('production_records')
+        .select('*')
+        .order('date', { ascending: true });
+      
+      if (productionError) throw productionError;
+      
+      // Fetch fuel entries
+      const { data: fuelData, error: fuelError } = await supabase
+        .from('fuel_entries')
+        .select('*');
+      
+      if (fuelError) throw fuelError;
+      
+      // Combine and transform data for dashboard format
+      const combinedRecords = (productionData || []).map((record: any) => {
+        const fuels = (fuelData || [])
+          .filter((f: any) => f.record_id === record.id)
+          .map((f: any) => ({
+            id: f.id,
+            fuelType: f.fuel_type,
+            fuelWeight: f.fuel_weight,
+            fuelCost: f.fuel_cost,
+          }));
+        
+        const totalFuelWeight = fuels.reduce((sum: number, f: any) => sum + (f.fuelWeight || 0), 0);
+        
+        return {
+          id: record.id,
+          date: record.date,
+          // Map to dashboard format
+          materialInput: record.material_input || 0,
+          materialOutput: record.output_after_cooking || 0,
+          yield: record.yield_percentage || 0,
+          labourCost: record.labour_cost || 0,
+          laborCost: record.labour_cost || 0, // alias for compatibility
+          totalCost: record.total_cost || 0,
+          fuelUsed: totalFuelWeight, // Total fuel weight as fuel used
+          fuels: fuels,
+          costPerKg: record.cost_per_kg || 0,
+          totalHours: record.total_hours || 0,
+          batchNo: record.batch_no,
+          remarks: 'ok', // Default since not in production report
+        };
+      });
+      
+      setRecords(combinedRecords);
+    } catch (error) {
+      console.error('Error fetching records:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Calculations
   const filtered = records.filter(r => r.date.includes(search) || r.remarks.toLowerCase().includes(search.toLowerCase()));
@@ -35,12 +115,12 @@ export default function DashboardPage() {
   }));
 
   const statCards = [
-    { label: "Total Material Input", value: `${totalInput.toLocaleString()} kg`, sub: "Monthly Gross Input", icon: Layers, color: "bg-blue-600" },
-    { label: "Total Material Output", value: `${totalOutput.toLocaleString()} kg`, sub: "Net Production Yield", icon: Package, color: "bg-emerald-600" },
-    { label: "Average Plant Yield", value: `${avgYield.toFixed(2)}%`, sub: "Target: 50% Min", icon: Activity, color: "bg-indigo-600" },
-    { label: "Available Stone", value: `${lastRecord?.availableStone.toLocaleString()} kg`, sub: "Current Stock Level", icon: TrendingDown, color: "bg-amber-600" },
-    { label: "Total Production Cost", value: `₨ ${totalCost.toLocaleString()}`, sub: "Monthly OpEx", icon: DollarSign, color: "bg-slate-800" },
-    { label: "Avg Cost per kg", value: `₨ ${(totalCost / totalOutput || 0).toFixed(2)}`, sub: "Efficiency Metric", icon: TrendingUp, color: "bg-rose-600" },
+    { label: "Total Batches", value: records.length.toString(), sub: "Production Batches", icon: FileText, color: "bg-blue-600" },
+    { label: "Total Material Input", value: `${totalInput.toLocaleString()} kg`, sub: "Gross Input", icon: Layers, color: "bg-indigo-600" },
+    { label: "Total Output", value: `${totalOutput.toLocaleString()} kg`, sub: "Net Production", icon: Package, color: "bg-emerald-600" },
+    { label: "Average Yield", value: `${avgYield ? avgYield.toFixed(1) : 0}%`, sub: "Efficiency Rate", icon: Activity, color: "bg-amber-600" },
+    { label: "Total Production Cost", value: `Rs. ${totalCost.toLocaleString()}`, sub: "Operating Expenses", icon: DollarSign, color: "bg-rose-600" },
+    { label: "Avg Cost per kg", value: `Rs. ${(totalCost / totalOutput || 0).toFixed(2)}`, sub: "Unit Cost", icon: TrendingUp, color: "bg-slate-800" },
   ];
 
   return (
@@ -71,6 +151,12 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Grid */}
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mr-3" />
+          <span className="text-slate-600 font-medium">Loading real-time data...</span>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {statCards.map((card) => (
           <Card key={card.label} className="border-none shadow-lg bg-white/80 backdrop-blur-md hover:shadow-xl transition-all duration-300 group">
@@ -87,6 +173,7 @@ export default function DashboardPage() {
           </Card>
         ))}
       </div>
+      )}
 
       {/* Analytics Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -177,26 +264,41 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((record) => (
+                {loading ? (
+                  <TableRow>
+                    <td colSpan={8} className="text-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-blue-600" />
+                      <span className="text-slate-500">Loading records...</span>
+                    </td>
+                  </TableRow>
+                ) : filtered.length === 0 ? (
+                  <TableRow>
+                    <td colSpan={8} className="text-center py-8 text-slate-500">
+                      No production records found. Add records from the Production Report page.
+                    </td>
+                  </TableRow>
+                ) : (
+                  filtered.map((record) => (
                   <TableRow key={record.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4 font-black text-slate-900">{record.date}</td>
                     <td className="py-4 font-bold text-blue-600">{record.materialInput.toLocaleString()}</td>
                     <td className="py-4 font-bold text-emerald-600">{record.materialOutput.toLocaleString()}</td>
                     <td className="py-4">
                       <Badge variant={record.yield > 50 ? "default" : "outline"} className={record.yield > 50 ? "bg-emerald-500" : ""}>
-                        {record.yield.toFixed(2)}%
+                        {record.yield.toFixed(1)}%
                       </Badge>
                     </td>
-                    <td className="py-4 text-slate-500 font-medium">{record.fuelUsed.toLocaleString()} L</td>
-                    <td className="py-4 text-slate-700 font-bold">₨ {record.laborCost.toLocaleString()}</td>
-                    <td className="py-4 text-slate-900 font-black">₨ {record.totalCost.toLocaleString()}</td>
+                    <td className="py-4 text-slate-500 font-medium">{record.fuelUsed.toLocaleString()} kg</td>
+                    <td className="py-4 text-slate-700 font-bold">Rs {record.laborCost.toLocaleString()}</td>
+                    <td className="py-4 text-slate-900 font-black">Rs {record.totalCost.toLocaleString()}</td>
                     <td className="px-6 py-4 text-right">
                       <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md ${record.remarks === 'ok' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                         {record.remarks}
                       </span>
                     </td>
                   </TableRow>
-                ))}
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
