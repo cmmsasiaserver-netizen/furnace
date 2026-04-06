@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LayoutDashboard, BarChart3, LogOut, ChevronRight } from "lucide-react";
+import { LayoutDashboard, BarChart3, FileText, LogOut, ChevronRight } from "lucide-react";
 
 interface SidebarProps {
   activeItem?: string;
@@ -17,6 +17,13 @@ export function DashboardSidebar({ activeItem = "overview" }: SidebarProps) {
       items: [
         { id: "overview", label: "Overview", icon: LayoutDashboard },
         { id: "executive", label: "Executive Dashboard", icon: BarChart3 },
+      ],
+    },
+    {
+      title: "REPORTS",
+      color: "text-yellow-400",
+      items: [
+        { id: "production-report", label: "Production Report", icon: FileText },
       ],
     },
   ];
